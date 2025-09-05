@@ -23,7 +23,6 @@ app.config['MEDIA_ROOT'] = MEDIA_ROOT
 def apply_filter_to_video(input_path, output_path, filter_func):
     """Estrutura base para aplicar uma função de filtro em cada frame de um vídeo."""
     cap = cv2.VideoCapture(input_path)
-    # Codec H.264 para alta compatibilidade com navegadores
     fourcc = cv2.VideoWriter_fourcc(*'avc1')
     fps = int(cap.get(cv2.CAP_PROP_FPS))
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -37,7 +36,6 @@ def apply_filter_to_video(input_path, output_path, filter_func):
         
         processed_frame = filter_func(frame)
         
-        # Garante que o frame de saída sempre tenha 3 canais de cor (padrão BGR)
         if len(processed_frame.shape) == 2:
             processed_frame = cv2.cvtColor(processed_frame, cv2.COLOR_GRAY2BGR)
             
@@ -46,7 +44,6 @@ def apply_filter_to_video(input_path, output_path, filter_func):
     cap.release()
     out.release()
 
-# Funções de filtro individuais (cada uma processa um único frame)
 def filter_grayscale(frame):
     return cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
@@ -59,7 +56,7 @@ def filter_sepia(frame):
                        [0.349, 0.686, 0.168],
                        [0.393, 0.769, 0.189]])
     sepia_frame = cv2.transform(frame, kernel)
-    sepia_frame[np.where(sepia_frame > 255)] = 255 # Evita saturação de cor
+    sepia_frame[np.where(sepia_frame > 255)] = 255
     return sepia_frame
 
 def filter_pixelate(frame, pixel_size=12):
@@ -70,7 +67,6 @@ def filter_pixelate(frame, pixel_size=12):
 def filter_invert(frame):
     return cv2.bitwise_not(frame)
 
-# Mapeamento de nomes de filtros para as funções correspondentes
 FILTERS = {
     'grayscale': filter_grayscale,
     'canny': filter_canny_edge,
@@ -86,9 +82,10 @@ def get_db_connection():
     return conn
 
 def save_metadata_to_db(video_data):
+    """Salva os metadados no banco, agora incluindo path_thumbnail."""
     conn = get_db_connection()
-    sql = ''' INSERT INTO videos(id, original_name, original_ext, mime_type, size_bytes, duration_sec, fps, width, height, filter, created_at, path_original, path_processed)
-              VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?) '''
+    sql = ''' INSERT INTO videos(id, original_name, original_ext, mime_type, size_bytes, duration_sec, fps, width, height, filter, created_at, path_original, path_processed, path_thumbnail)
+              VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?) '''
     cur = conn.cursor()
     cur.execute(sql, tuple(video_data.values()))
     conn.commit()
@@ -104,7 +101,6 @@ def format_bytes(size):
         size /= power
         n += 1
     return f"{size:.1f} {power_labels[n]}B"
-
 
 # --- Rotas da API (Endpoints) ---
 
@@ -134,7 +130,6 @@ def upload_video():
         video_dir_rel = os.path.join(date_path, video_uuid)
         video_dir_abs = os.path.join(app.config['MEDIA_ROOT'], video_dir_rel)
 
-        # Cria a estrutura de pastas para o vídeo
         original_dir = os.path.join(video_dir_abs, "original")
         processed_dir = os.path.join(video_dir_abs, "processed", filter_type)
         thumbs_dir = os.path.join(video_dir_abs, "thumbs")
@@ -142,17 +137,14 @@ def upload_video():
         os.makedirs(processed_dir, exist_ok=True)
         os.makedirs(thumbs_dir, exist_ok=True)
 
-        # Move o arquivo original para o diretório final
         final_original_path_rel = os.path.join(video_dir_rel, "original", f"video{ext}")
         final_original_path_abs = os.path.join(app.config['MEDIA_ROOT'], final_original_path_rel)
         os.rename(temp_path, final_original_path_abs)
 
-        # Processa o vídeo com o filtro selecionado
         final_processed_path_rel = os.path.join(video_dir_rel, "processed", filter_type, f"video{ext}")
         final_processed_path_abs = os.path.join(app.config['MEDIA_ROOT'], final_processed_path_rel)
         apply_filter_to_video(final_original_path_abs, final_processed_path_abs, FILTERS[filter_type])
 
-        # Extrai metadados e gera thumbnail
         cap = cv2.VideoCapture(final_original_path_abs)
         fps = cap.get(cv2.CAP_PROP_FPS)
         frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -160,19 +152,22 @@ def upload_video():
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         
+        # Gera o caminho relativo e absoluto da thumbnail
+        thumb_path_rel = os.path.join(video_dir_rel, "thumbs", "frame_0001.jpg")
+        thumb_path_abs = os.path.join(app.config['MEDIA_ROOT'], thumb_path_rel)
+
         ret, frame = cap.read()
         if ret:
-            thumb_path = os.path.join(thumbs_dir, "frame_0001.jpg")
-            cv2.imwrite(thumb_path, frame)
+            cv2.imwrite(thumb_path_abs, frame)
         cap.release()
         
-        # Salva metadados no banco de dados
         video_data = {
             "id": video_uuid, "original_name": name, "original_ext": ext, "mime_type": file.mimetype,
             "size_bytes": os.path.getsize(final_original_path_abs), "duration_sec": round(duration, 2),
             "fps": round(fps, 2), "width": width, "height": height, "filter": filter_type,
             "created_at": now.isoformat(), "path_original": final_original_path_rel,
-            "path_processed": final_processed_path_rel
+            "path_processed": final_processed_path_rel,
+            "path_thumbnail": thumb_path_rel  # <-- CORREÇÃO: Adicionado ao dicionário
         }
         save_metadata_to_db(video_data)
         
@@ -182,11 +177,24 @@ def upload_video():
 
 @app.route('/videos', methods=['GET'])
 def get_videos():
-    """Retorna a lista de todos os vídeos processados."""
+    """Retorna a lista de todos os vídeos processados, com caminhos formatados para URL."""
     conn = get_db_connection()
-    videos = conn.execute('SELECT * FROM videos ORDER BY created_at DESC').fetchall()
+    videos_from_db = conn.execute('SELECT * FROM videos ORDER BY created_at DESC').fetchall()
     conn.close()
-    return jsonify([dict(video) for video in videos])
+    
+    # CORREÇÃO: Formata os caminhos antes de enviar o JSON
+    videos_list = []
+    for video in videos_from_db:
+        video_dict = dict(video)
+        if video_dict.get('path_original'):
+            video_dict['path_original'] = video_dict['path_original'].replace('\\', '/')
+        if video_dict.get('path_processed'):
+            video_dict['path_processed'] = video_dict['path_processed'].replace('\\', '/')
+        if video_dict.get('path_thumbnail'):
+            video_dict['path_thumbnail'] = video_dict['path_thumbnail'].replace('\\', '/')
+        videos_list.append(video_dict)
+        
+    return jsonify(videos_list)
 
 @app.route('/video/<video_id>', methods=['DELETE'])
 def delete_video(video_id):
@@ -199,24 +207,18 @@ def delete_video(video_id):
             conn.close()
             return jsonify({"error": "Vídeo não encontrado"}), 404
 
-        # Deleta a pasta principal do vídeo (contém original, processed, thumbs)
-        base_path_rel = os.path.join(str(datetime.fromisoformat(video['created_at']).year),
-                                     f"{datetime.fromisoformat(video['created_at']).month:02d}",
-                                     f"{datetime.fromisoformat(video['created_at']).day:02d}",
-                                     video['id'])
+        base_path_rel = os.path.dirname(os.path.dirname(video['path_original']))
         video_dir_abs = os.path.join(app.config['MEDIA_ROOT'], base_path_rel)
         
         if os.path.exists(video_dir_abs):
             shutil.rmtree(video_dir_abs)
         
-        # Deleta o registro do banco de dados
         conn.execute('DELETE FROM videos WHERE id = ?', (video_id,))
         conn.commit()
         conn.close()
         
         return jsonify({"success": True, "message": "Vídeo deletado com sucesso"}), 200
     except Exception as e:
-        # Log do erro no servidor para depuração
         print(f"Erro ao deletar vídeo {video_id}: {e}")
         return jsonify({"error": "Erro interno no servidor ao tentar deletar o vídeo."}), 500
 
@@ -231,15 +233,13 @@ def server_gui():
     for video in videos_data:
         video_dict = dict(video)
         
-        # Cria os caminhos para a URL, substituindo barras e construindo o path do thumbnail
+        # Apenas formata os caminhos que já vêm do banco
         video_dict['path_original'] = video['path_original'].replace('\\', '/')
-        if video_dict['path_processed']:
+        if video_dict.get('path_processed'):
             video_dict['path_processed'] = video['path_processed'].replace('\\', '/')
+        if video_dict.get('path_thumbnail'):
+            video_dict['path_thumbnail'] = video['path_thumbnail'].replace('\\', '/')
         
-        base_path = os.path.dirname(os.path.dirname(video_dict['path_original']))
-        video_dict['thumbnail'] = f"{base_path}/thumbs/frame_0001.jpg"
-        
-        # Adiciona metadados formatados para exibição
         video_dict['formatted_size'] = format_bytes(video_dict.get('size_bytes'))
         video_dict['resolution'] = f"{video_dict.get('width')}x{video_dict.get('height')}"
         
@@ -252,10 +252,7 @@ def serve_media(filename):
     """Serve os arquivos de mídia (vídeos, thumbnails) para o navegador."""
     return send_from_directory(app.config['MEDIA_ROOT'], filename)
 
-
 # --- Bloco de Execução Principal ---
 if __name__ == '__main__':
-    # Garante que a pasta de uploads temporários exista
     os.makedirs(INCOMING_PATH, exist_ok=True)
-    # Inicia o servidor Flask
     app.run(host='0.0.0.0', port=5000, debug=True)

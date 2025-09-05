@@ -1,186 +1,236 @@
 <!DOCTYPE html>
 <html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Painel de Vídeos Processados</title>
     <style>
-        :root {
-            --bg-color: #1a1a1a;
-            --card-color: #2c2c2c;
-            --text-color: #e0e0e0;
-            --primary-color: #00aaff;
-            --border-color: #444;
-            --danger-color: #ff4d4d;
-        }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 2em;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-        }
-        h1 {
-            text-align: center;
-            color: var(--primary-color);
-            margin-bottom: 1.5em;
-        }
-        .video-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-            gap: 25px;
-        }
-        .video-card {
-            background-color: var(--card-color);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-            display: flex;
-            flex-direction: column;
-        }
-        .video-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 20px rgba(0, 170, 255, 0.2);
-        }
-        .thumbnail-container {
-            position: relative;
-        }
-        .thumbnail-container img {
-            width: 100%;
-            height: auto;
-            display: block;
-        }
-        .play-overlay {
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.4);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 48px;
-            opacity: 0;
-            transition: opacity 0.2s ease;
-        }
-        .thumbnail-container:hover .play-overlay {
-            opacity: 1;
-        }
-        .video-info {
-            padding: 15px;
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-        }
-        .video-info h3 {
-            margin: 0 0 10px 0;
-            font-size: 1.2em;
-            word-break: break-all;
-        }
-        .metadata {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-            font-size: 0.85em;
-            color: #bbb;
-            margin-bottom: 15px;
-        }
-        .metadata span { display: block; }
-        .tag {
-            background-color: var(--primary-color);
-            color: var(--bg-color);
-            padding: 3px 8px;
-            border-radius: 5px;
-            font-weight: bold;
-            text-transform: capitalize;
-        }
-        .actions {
-            margin-top: auto;
-            display: flex;
-            gap: 10px;
-        }
-        .btn {
-            flex: 1;
-            padding: 10px;
-            border: none;
-            border-radius: 6px;
-            text-align: center;
-            text-decoration: none;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background-color 0.2s ease;
-        }
-        .btn-primary { background-color: var(--primary-color); color: var(--bg-color); }
-        .btn-secondary { background-color: var(--border-color); color: var(--text-color); }
-        .btn-danger { background-color: var(--danger-color); color: white; font-size: 1em;}
-        .btn:hover { filter: brightness(1.2); }
-        #no-videos { text-align: center; font-size: 1.2em; color: #888; }
+      :root {
+        --bg-color: #1a1a1a;
+        --card-color: #2c2c2c;
+        --text-color: #e0e0e0;
+        --primary-color: #00aaff;
+        --border-color: #444;
+        --danger-color: #ff4d4d;
+      }
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        margin: 0;
+        padding: 2em;
+        background-color: var(--bg-color);
+        color: var(--text-color);
+      }
+      h1 {
+        text-align: center;
+        color: var(--primary-color);
+        margin-bottom: 1.5em;
+      }
+      .video-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 25px;
+      }
+      .video-card {
+        background-color: var(--card-color);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        display: flex;
+        flex-direction: column;
+      }
+      .video-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(0, 170, 255, 0.2);
+      }
+      .thumbnail-container {
+        position: relative;
+      }
+      .thumbnail-container img {
+        width: 100%;
+        height: auto;
+        display: block;
+        background-color: #111; /* Fundo para caso a imagem demore a carregar */
+        min-height: 180px;
+      }
+      .play-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.4);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 48px;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+      }
+      .thumbnail-container:hover .play-overlay {
+        opacity: 1;
+      }
+      .video-info {
+        padding: 15px;
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+      }
+      .video-info h3 {
+        margin: 0 0 10px 0;
+        font-size: 1.2em;
+        word-break: break-all;
+      }
+      .metadata {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        font-size: 0.85em;
+        color: #bbb;
+        margin-bottom: 15px;
+      }
+      .metadata span {
+        display: block;
+      }
+      .tag {
+        background-color: var(--primary-color);
+        color: var(--bg-color);
+        padding: 3px 8px;
+        border-radius: 5px;
+        font-weight: bold;
+        text-transform: capitalize;
+      }
+      .actions {
+        margin-top: auto;
+        display: flex;
+        gap: 10px;
+      }
+      .btn {
+        flex: 1;
+        padding: 10px;
+        border: none;
+        border-radius: 6px;
+        text-align: center;
+        text-decoration: none;
+        font-weight: bold;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+      }
+      .btn-primary {
+        background-color: var(--primary-color);
+        color: var(--bg-color);
+      }
+      .btn-secondary {
+        background-color: var(--border-color);
+        color: var(--text-color);
+      }
+      .btn-danger {
+        background-color: var(--danger-color);
+        color: white;
+        font-size: 1em;
+      }
+      .btn:hover {
+        filter: brightness(1.2);
+      }
+      #no-videos {
+        text-align: center;
+        font-size: 1.2em;
+        color: #888;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <h1>Painel de Vídeos Processados</h1>
     <div class="video-grid" id="video-grid">
-        {% for video in videos %}
-        <div class="video-card" id="video-{{ video.id }}">
-            <a href="{{ url_for('serve_media', filename=video.path_processed) }}" target="_blank" class="thumbnail-container">
-                <img src="{{ url_for('serve_media', filename=video.thumbnail) }}" alt="Thumbnail">
-                <div class="play-overlay">&#9658;</div>
-            </a>
-            <div class="video-info">
-                <h3>{{ video.original_name }}{{ video.original_ext }}</h3>
-                <div class="metadata">
-                    <span><strong>Filtro:</strong> <span class="tag">{{ video.filter }}</span></span>
-                    <span><strong>Tamanho:</strong> {{ video.formatted_size }}</span>
-                    <span><strong>Resolução:</strong> {{ video.resolution }}</span>
-                    <span><strong>Duração:</strong> {{ video.duration_sec }}s</span>
-                </div>
-                <div class="actions">
-                    <a href="{{ url_for('serve_media', filename=video.path_original) }}" target="_blank" class="btn btn-secondary">Original</a>
-                    <a href="{{ url_for('serve_media', filename=video.path_processed) }}" target="_blank" class="btn btn-primary">Processado</a>
-                </div>
-            </div>
-             <button class="btn btn-danger" onclick="deleteVideo('{{ video.id }}')">Excluir</button>
+      {% for video in videos %}
+      <div class="video-card" id="video-{{ video.id }}">
+        <a
+          href="{{ url_for('serve_media', filename=video.path_processed) }}"
+          target="_blank"
+          class="thumbnail-container"
+        >
+          <img
+            src="{{ url_for('serve_media', filename=video.path_thumbnail) }}"
+            alt="Thumbnail"
+          />
+          <div class="play-overlay">&#9658;</div>
+        </a>
+        <div class="video-info">
+          <h3>{{ video.original_name }}{{ video.original_ext }}</h3>
+          <div class="metadata">
+            <span
+              ><strong>Filtro:</strong>
+              <span class="tag">{{ video.filter }}</span></span
+            >
+            <span><strong>Tamanho:</strong> {{ video.formatted_size }}</span>
+            <span><strong>Resolução:</strong> {{ video.resolution }}</span>
+            <span><strong>Duração:</strong> {{ video.duration_sec }}s</span>
+          </div>
+          <div class="actions">
+            <a
+              href="{{ url_for('serve_media', filename=video.path_original) }}"
+              target="_blank"
+              class="btn btn-secondary"
+              >Original</a
+            >
+            <a
+              href="{{ url_for('serve_media', filename=video.path_processed) }}"
+              target="_blank"
+              class="btn btn-primary"
+              >Processado</a
+            >
+          </div>
         </div>
-        {% endfor %}
+        <button class="btn btn-danger" onclick="deleteVideo('{{ video.id }}')">
+          Excluir
+        </button>
+      </div>
+      {% endfor %}
     </div>
     {% if not videos %}
-        <p id="no-videos">Nenhum vídeo processado ainda.</p>
+    <p id="no-videos">Nenhum vídeo processado ainda.</p>
     {% endif %}
 
     <script>
-        function deleteVideo(videoId) {
-            if (!confirm('Tem certeza que deseja excluir este vídeo permanentemente?')) {
-                return;
-            }
-
-            fetch(`/video/${videoId}`, {
-                method: 'DELETE',
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    const card = document.getElementById(`video-${videoId}`);
-                    if (card) {
-                        card.style.transition = 'opacity 0.5s ease';
-                        card.style.opacity = '0';
-                        setTimeout(() => {
-                            card.remove();
-                            const grid = document.getElementById('video-grid');
-                            if (grid.children.length === 0) {
-                                grid.insertAdjacentHTML('afterend', '<p id="no-videos">Nenhum vídeo processado ainda.</p>');
-                            }
-                        }, 500);
-                    }
-                } else {
-                    alert('Erro ao excluir o vídeo: ' + data.error);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Ocorreu um erro de conexão.');
-            });
+      function deleteVideo(videoId) {
+        if (
+          !confirm("Tem certeza que deseja excluir este vídeo permanentemente?")
+        ) {
+          return;
         }
+
+        fetch(`/video/${videoId}`, {
+          method: "DELETE",
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              const card = document.getElementById(`video-${videoId}`);
+              if (card) {
+                card.style.transition = "opacity 0.5s ease";
+                card.style.opacity = "0";
+                setTimeout(() => {
+                  card.remove();
+                  const grid = document.getElementById("video-grid");
+                  if (grid.children.length === 0) {
+                    grid.insertAdjacentHTML(
+                      "afterend",
+                      '<p id="no-videos">Nenhum vídeo processado ainda.</p>'
+                    );
+                  }
+                }, 500);
+              }
+            } else {
+              alert("Erro ao excluir o vídeo: " + data.error);
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            alert("Ocorreu um erro de conexão.");
+          });
+      }
     </script>
-</body>
+  </body>
 </html>

@@ -1,17 +1,14 @@
-# client.py (Versão Corrigida e Simplificada)
-
+# client.py
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 import requests
 import threading
 import os
-import webbrowser  # Usaremos este método, que é mais simples e confiável
+import webbrowser
 import io
 from PIL import Image, ImageTk
-
 from requests_toolbelt.multipart.encoder import MultipartEncoder, MultipartEncoderMonitor
 
-# Lembre-se de colocar o IP do seu servidor aqui se estiver em outra máquina
 SERVER_URL = "http://127.0.0.1:5000" 
 
 class VideoUploaderClient(tk.Tk):
@@ -70,7 +67,6 @@ class VideoUploaderClient(tk.Tk):
         history_actions_frame = ttk.Frame(history_frame)
         history_actions_frame.grid(row=1, column=0, pady=10, sticky="ew")
         
-        # BOTÕES SIMPLIFICADOS
         self.view_original_button = ttk.Button(history_actions_frame, text="Visualizar Original", command=lambda: self.view_video_in_browser('original'))
         self.view_original_button.pack(side=tk.LEFT, padx=5)
         self.view_processed_button = ttk.Button(history_actions_frame, text="Visualizar Processado", command=lambda: self.view_video_in_browser('processed'))
@@ -97,9 +93,7 @@ class VideoUploaderClient(tk.Tk):
 
         self.load_history()
 
-    # --- FUNÇÃO DE VISUALIZAÇÃO SIMPLIFICADA ---
     def view_video_in_browser(self, video_type):
-        """Abre o vídeo selecionado em uma nova aba do navegador."""
         selected_items = self.history_tree.selection()
         if not selected_items:
             messagebox.showwarning("Aviso", "Nenhum vídeo selecionado no histórico.")
@@ -117,13 +111,10 @@ class VideoUploaderClient(tk.Tk):
         
         if relative_path:
             video_url = f"{SERVER_URL}/media/{relative_path}"
-            # A mágica acontece aqui: simples e direto.
             webbrowser.open(video_url)
         else:
             messagebox.showerror("Erro", f"Caminho para o vídeo '{video_type}' não encontrado.")
 
-
-    # --- FUNÇÃO PARA EXIBIR A THUMBNAIL ---
     def on_video_select(self, event):
         """Chamada quando um vídeo é selecionado. Baixa e exibe a thumbnail."""
         selected_items = self.history_tree.selection()
@@ -133,10 +124,10 @@ class VideoUploaderClient(tk.Tk):
         video_id = self.history_tree.item(selected_items[0])['values'][0]
         video_info = self.video_data.get(video_id)
 
-        if video_info and video_info.get('thumbnail'):
-            thumb_url = f"{SERVER_URL}/media/{video_info['thumbnail']}"
+        # CORREÇÃO: Procurar por 'path_thumbnail' que agora vem da API /videos
+        if video_info and video_info.get('path_thumbnail'):
+            thumb_url = f"{SERVER_URL}/media/{video_info['path_thumbnail']}"
             try:
-                # O download da thumbnail é feito em uma thread para não travar a interface
                 threading.Thread(target=self.fetch_and_display_thumbnail, args=(thumb_url,)).start()
             except Exception as e:
                 print(f"Erro ao iniciar thread da thumbnail: {e}")
@@ -151,20 +142,17 @@ class VideoUploaderClient(tk.Tk):
             response.raise_for_status()
 
             image_data = Image.open(io.BytesIO(response.content))
-            image_data.thumbnail((450, 450)) # Redimensiona mantendo a proporção
+            image_data.thumbnail((450, 450))
             photo = ImageTk.PhotoImage(image_data)
 
             self.thumbnail_label.config(image=photo, text="")
             self.thumbnail_label.image = photo
 
         except Exception as e:
-            # Imprime o erro no console para diagnóstico
             print(f"Erro ao carregar thumbnail da URL {thumb_url}: {e}")
             self.thumbnail_label.config(image=None, text=f"Erro ao carregar thumbnail.")
             self.thumbnail_label.image = None
 
-
-    # --- DEMAIS FUNÇÕES (sem alterações significativas) ---
     def select_file(self):
         filepath = filedialog.askopenfilename(title="Selecione um vídeo", filetypes=(("Vídeos", "*.mp4 *.avi *.mov"), ("Todos os arquivos", "*.*")))
         if filepath:
@@ -235,8 +223,8 @@ class VideoUploaderClient(tk.Tk):
                 ))
                 self.video_data[video['id']] = video
             self.status_label.config(text="Histórico atualizado.")
-        except requests.exceptions.RequestException:
-            self.status_label.config(text="Erro ao carregar histórico.")
+        except requests.exceptions.RequestException as e:
+            self.status_label.config(text="Erro ao carregar histórico: " + str(e))
 
     def delete_selected_video(self):
         selected_items = self.history_tree.selection()
